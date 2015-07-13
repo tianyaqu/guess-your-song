@@ -21,9 +21,16 @@ def fetch_similimar(hashes,n):
     largest = 0
     song_id = None
     hash_set = [x[0] for x in hashes]
-    #offset = [x[0] for x in hashes]
-    for hash,offset in hashes:
-        for px in Print.objects(hash__in=hash_set):
+    print len(hashes)
+    xx = {}
+    
+    for px in Print.objects(hash__in=hash_set):
+        for hash,offset in hashes:
+            if hash != px.hash:
+                continue
+            if px.hash not in xx:
+                xx[px.hash] = 0
+            xx[px.hash] += 1
             diff = offset - px.offset
             song = px.song
             if diff not in mapper:
@@ -36,6 +43,7 @@ def fetch_similimar(hashes,n):
                 largest = diff
                 largest_count = mapper[diff][song]
                 song_id = song
+    print xx
     return song_id.name,largest_count
 
 def guess_from_snippet(file):
@@ -45,5 +53,5 @@ def guess_from_snippet(file):
         
 if __name__ == '__main__':
     connect(MONGO_DB)
-    #train_song_prints('c:\\src',['mp3'])
-    guess_from_snippet('c:\\src\\b.mp3')
+    #train_song_prints('c:\\src',['test'])
+    guess_from_snippet('c:\\src\\wr.wma')

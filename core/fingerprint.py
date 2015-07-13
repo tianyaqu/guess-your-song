@@ -23,7 +23,7 @@ DEFAULT_WINDOW_SIZE = 4096
 # Ratio by which each sequential window overlaps the last and the
 # next window. Higher overlap will allow a higher granularity of offset
 # matching, but potentially more fingerprints.
-DEFAULT_OVERLAP_RATIO = 0.5
+DEFAULT_OVERLAP_RATIO = 0
 
 ######################################################################
 # Degree to which a fingerprint can be paired with its neighbors --
@@ -47,7 +47,7 @@ PEAK_NEIGHBORHOOD_SIZE = 20
 # to be paired as a fingerprint. If your max is too low, higher values of
 # DEFAULT_FAN_VALUE may not perform as expected.
 MIN_HASH_TIME_DELTA = 0
-MAX_HASH_TIME_DELTA = 200
+MAX_HASH_TIME_DELTA = 100
 
 ######################################################################
 # If True, will sort peaks temporally for fingerprinting;
