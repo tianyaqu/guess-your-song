@@ -61,6 +61,42 @@ PEAK_SORT = True
 # potentially higher collisions and misclassifications when identifying songs.
 FINGERPRINT_REDUCTION = 20
 
+def sliding_window(sequence,ws=DEFAULT_WINDOW_SIZE,shift=DEFAULT_WINDOW_SIZE/2):
+    """Returns a generator that will iterate through
+    the defined chunks of input sequence.  Input sequence
+    must be iterable."""
+ 
+    # Verify the inputs
+    try: it = iter(sequence)
+    except TypeError:
+        raise Exception("**ERROR** sequence must be iterable.")
+    if not ((type(ws) == type(0)) and (type(shift) == type(0))):
+        raise Exception("**ERROR** type(ws) and type(shift) must be int.")
+    if shift > ws:
+        raise Exception("**ERROR** shift must not be larger than ws.")
+    if ws > len(sequence):
+        raise Exception("**ERROR** ws must not be larger than sequence length.")
+ 
+    # Pre-compute number of chunks to emit
+    num_frames = ((len(sequence)-ws)/shift)+1
+ 
+    # Do the work
+    for i in range(0,num_frames*shift,shift):
+        yield sequence[i:i+ws]
+
+def acf(sequence):
+    n = len(sequence)
+    data = np.asarray(sequence)
+    mean = np.mean(data)
+    c0 = np.sum((data - mean) ** 2) / float(n)
+
+    def r(h):
+        acf_lag = ((data[:n - h] - mean) * (data[h:] - mean)).sum() / float(n) / c0
+        return round(acf_lag, 3)
+    x = np.arange(n) # Avoiding lag 0 calculation
+    acf_coeffs = map(r, x)
+    return np.asarray(acf_coeffs)
+
 def fingerprint(channel_samples, Fs=DEFAULT_FS,
                 wsize=DEFAULT_WINDOW_SIZE,
                 wratio=DEFAULT_OVERLAP_RATIO,
