@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pydub
 
-from fingerprint import fingerprint,sliding_window,acf,DEFAULT_FS
+from fingerprint import fingerprint,sliding_window,acf,DEFAULT_FS,DEFAULT_WINDOW_SIZE
 
 def get_raw_from_file(filename):
     container = pydub.AudioSegment.from_file(filename)
@@ -34,7 +34,7 @@ def find_max(sequence):
     try:
         index = sequence[l].argmax()
     except:
-        return 0,1
+        return 0,-1
     loc = np.where(l)[0]
     offset = loc[index]
     return sequence[offset],offset
@@ -44,6 +44,15 @@ def freq_to_notes(freqs):
     notes_array = np.asarray(freqs)
     notes = 12 * (np.log2(notes_array) - log440) + 69
     return notes
+
+def del_outlier_pitches(sequence,thresh=1000):
+    x = np.asarray(sequence)
+    criteria_a = (x < 1)
+    criteria_b = (x > thresh)
+    criteria = criteria_a|criteria_b
+    criteria = (criteria == False)
+    return x[criteria]
+    
 
 def median_filt(data, k):
     """Apply a length-k median filter to a 1D array x.
@@ -69,12 +78,11 @@ def cal_energy(sequence):
     
 def extract_pitches(filename,fs=DEFAULT_FS):
     channels = get_raw_from_file(filename)
-    #for channel in channels:
     data = channels[0]
     energy = cal_energy(data)
     result = []
     for window in sliding_window(data):
-        pitch = 1
+        pitch = -1
         if cal_energy(window) < 0.3 * energy:
             pass
         else:
@@ -82,7 +90,6 @@ def extract_pitches(filename,fs=DEFAULT_FS):
             value,offset = find_max(r)
             #print value,offset
             if(value < 0.01):
-                #yield -1
                 pass
             else:
                 pitch =  round(1.0*fs/(offset))
@@ -90,24 +97,48 @@ def extract_pitches(filename,fs=DEFAULT_FS):
     return result
         
 if __name__ == '__main__':
-    file = 'c:\\src\\drm.wma'
+    from dtw import dtw
+    file = 'c:\\src\\drm_clip.mp3'
+    file1 = 'c:\\src\\wenrou_sing2.mp3'
     noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     r = []
     for x in extract_pitches(file):
         r.append(x)
-    print r
+    
     filter = median_filt(r,5)
+    print filter
+    filter = del_outlier_pitches(filter)
+    filter = freq_to_notes(filter)
+
+    s = []
+    for x in extract_pitches(file1):
+        s.append(x)
+    
+    filter2 = median_filt(s,5)
+    print filter2
+    filter2 = del_outlier_pitches(filter2)
+    filter2 = freq_to_notes(filter2)
 
     plt.figure()
-    plt.plot(filter)
-    #plt.plot(r)
-    plt.show()
+    plt.plot(filter, color="blue")
+    plt.plot(filter2, color="red")
+    dist, cost, path = dtw(filter, filter2)
+    print dist
+
     
     k = freq_to_notes(filter)
     nn =[]
     for x in k:
-        nn.append(noteStrings[int(x)%12])
+        nn.append(int(x))
     print nn
+    """
+    k = freq_to_notes(filter2)
+    nn =[]
+    for x in k:
+        nn.append(int(x))
+    print nn
+    """
+    plt.show()
     #file_hashes(file)
     
         

@@ -61,11 +61,11 @@ PEAK_SORT = True
 # potentially higher collisions and misclassifications when identifying songs.
 FINGERPRINT_REDUCTION = 20
 
-def sliding_window(sequence,ws=DEFAULT_WINDOW_SIZE,shift=DEFAULT_WINDOW_SIZE/2):
+def sliding_window(sequence,ws=DEFAULT_WINDOW_SIZE,shift_ratio=1):
     """Returns a generator that will iterate through
     the defined chunks of input sequence.  Input sequence
     must be iterable."""
- 
+    shift = int(shift_ratio*ws)
     # Verify the inputs
     try: it = iter(sequence)
     except TypeError:
