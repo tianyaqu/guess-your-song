@@ -111,6 +111,7 @@ def cal_energy(sequence):
 def frame_to_pitch(frame,fs,thresh):
     frame_x = np.asarray(frame)
     invalid = -1
+
     if cal_energy(frame_x) < thresh:
         return invalid
     else:
@@ -133,17 +134,20 @@ def extract_pitches(filename):
     ws = int(round(32*fs/1000.0))
     data = channels[0]
     energy = cal_energy(data)
+    thresh = 0.3*energy
     result = []
     for window in sliding_window(data,ws):
-        pitch = frame_to_pitch(window,fs,0.3*energy)
+        pitch = frame_to_pitch(window,fs,thresh)
         result.append(pitch)
     return result
     
 def pitch_vector_distance(pa,pb):
+    
     la = ~np.isnan(pa)
     lb = ~np.isnan(pb)
     x = pa[la]
     y = pb[lb]
+    
     dist, cost, path = dtw(x,y)
     return dist
     
@@ -151,88 +155,41 @@ def vector_to_file(t,file):
     s = 's=['
     for x in t:
         s=s+ str(x)+','
-    s+=']'
+    s+='];'
     with open(file,'wb') as f:
         f.write(s)
         
 
 def file_to_pitch_vector(file):
-    r = []
-    for x in extract_pitches(file):
-        r.append(x)
-        
+    r = extract_pitches(file)
     r1 = median_filt(r,5)
     t = freq_to_notes(r1)
-    #t = median_filt(r1,5)
-    #t = r1
-    s = 's=['
-    for x in t:
-        s=s+ str(x)+','
-    s+=']'
-    #print s
     
     return t
     
 if __name__ == '__main__':
     from dtw import dtw
     #file = 'c:\\src\\sap\\doremi.wav'
-    file = 'mxml.wma'
-    file1 = 'c:\\src\\wenrou_sing2.mp3'
-    noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-    r = []
-    for x in extract_pitches(file):
-        r.append(x)
-    #print r
-    
-    r1 = median_filt(r,5)
-    t = freq_to_notes(r1)
-    
-    t = median_filt(t,5)
-    #t = note_segment(t)
-    s = 's=['
-    for x in t:
-        s=s+ str(x)+','
-    s+=']'
-    print s
-    plt.plot(t)
+    f1 = 'xml.wav'
+    f2 = 'mxml2.wma'
+    f3 = 'soo.wav'
+    f4 = '10-little-indians.wav'
+
+    p1 = file_to_pitch_vector(f1)
+    p2 = file_to_pitch_vector(f2)
+    p3 = file_to_pitch_vector(f3)
+    p4 = file_to_pitch_vector(f4)
+
+    #vector_to_file(p1,'p1.txt')
+    #vector_to_file(p2,'p2.txt')
+    #vector_to_file(p3,'p3.txt')
+    print pitch_vector_distance(p1,p2)
+    print pitch_vector_distance(p2,p3)
+    print pitch_vector_distance(p2,p4)
+    plt.plot(p1,'red')
+    plt.plot(p2,'green')
+    plt.plot(p3,'blue')
+    plt.plot(p4,'yellow')
     plt.show()
-    """
-    filter = median_filt(r,5)
-    filter = del_outlier_pitches(filter)
-    print filter
-    filter = freq_to_notes(filter)
-    print filter
-    filter = note_segment(filter)
-    print filter
-
-    s = []
-    for x in extract_pitches(file1):
-        s.append(x)
-    
-    filter2 = median_filt(s,5)
-    
-    filter2 = del_outlier_pitches(filter2)
-    print filter2
-    filter2 = freq_to_notes(filter2)
-    print filter2
-    filter2 = note_segment(filter2)
-    print filter2
-
-    plt.figure()
-    plt.plot(filter, color="blue")
-    plt.plot(filter2, color="red")
-    dist, cost, path = dtw(filter, filter2)
-    print dist
-    """
-
-    """
-    k = freq_to_notes(filter2)
-    nn =[]
-    for x in k:
-        nn.append(int(x))
-    print nn
-    
-    """
-    #plt.show()
     
         
