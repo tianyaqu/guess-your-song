@@ -6,12 +6,16 @@ from fingerprint import fingerprint,sliding_window,acf,DEFAULT_FS,DEFAULT_WINDOW
 
 def get_raw_from_file(filename):
     container = pydub.AudioSegment.from_file(filename)
-    data = np.fromstring(container._data, np.int16)
-
+    if container.sample_width == 1:
+        data = np.fromstring(container._data, np.int8)
+    else:
+        data = np.fromstring(container._data, np.int16)
+    
+    data = data - data.mean()
     channels = []
     for chn in xrange(container.channels):
         channels.append(data[chn::container.channels])
-    return channels
+    return channels,container.frame_rate
     
 def generate_hashes(data):
     hashes = fingerprint(data,wsize = 4096,wratio = 0.5)
@@ -52,7 +56,33 @@ def del_outlier_pitches(sequence,thresh=1000):
     criteria = criteria_a|criteria_b
     criteria = (criteria == False)
     return x[criteria]
-    
+
+def note_segment(sequence,thresh=1):
+    x = np.asarray(sequence)
+    y =  np.array([])
+    start = end = 0
+    for index in range(x.size-1):
+        if(abs(x[index] - x[index+1]) < thresh):
+            end = index + 1
+            if(end == x.size-1):
+                #print 's',start,index+1,x[start:x.size]
+                avg = np.average(x[start:x.size])
+                x[start:x.size] = avg
+                if(x.size - start >= 1):
+                    #print 'append'
+                    y = np.append(y,x[start:x.size])
+        else:
+            #print start,index+1, x[start:index+1]
+            avg = np.average(x[start:index+1])
+            x[start:index+1] = avg
+            if(index+1 - start >= 1):
+                #print 'b append'
+                y = np.append(y,x[start:index+1])
+            start = index + 1
+
+        index += 1
+
+    return y
 
 def median_filt(data, k):
     """Apply a length-k median filter to a 1D array x.
@@ -74,71 +104,135 @@ def median_filt(data, k):
 
 def cal_energy(sequence):
     data = np.asarray(sequence)
-    return 1.0*abs(data).sum()/data.size
+    return data.max()
+    #return abs(data).sum()
+    #return 1.0*abs(data).sum()/data.size
     
-def extract_pitches(filename,fs=DEFAULT_FS):
-    channels = get_raw_from_file(filename)
+def frame_to_pitch(frame,fs,thresh):
+    frame_x = np.asarray(frame)
+    invalid = -1
+    if cal_energy(frame_x) < thresh:
+        return invalid
+    else:
+        down_limit = 40
+        up_limit = 1000
+        n1 = int(round(fs*1.0/up_limit))
+        n2 = int(round(fs*1.0/down_limit))
+        frame_acf = acf(frame_x)
+        frame_acf[np.arange(n1)] = invalid
+        if n2 < frame_acf.size:
+            frame_acf[np.arange(n2,frame_acf.size)] = invalid
+        index = frame_acf.argmax()
+        #max = frame_x[index]
+        #print n1,n2,max,index
+        pitch = fs/(index - 1.0)
+        return pitch
+    
+def extract_pitches(filename):
+    channels,fs = get_raw_from_file(filename)
+    ws = int(round(32*fs/1000.0))
     data = channels[0]
     energy = cal_energy(data)
     result = []
-    for window in sliding_window(data):
-        pitch = -1
-        if cal_energy(window) < 0.3 * energy:
-            pass
-        else:
-            r = acf(window)
-            value,offset = find_max(r)
-            #print value,offset
-            if(value < 0.01):
-                pass
-            else:
-                pitch =  round(1.0*fs/(offset))
+    for window in sliding_window(data,ws):
+        pitch = frame_to_pitch(window,fs,0.3*energy)
         result.append(pitch)
     return result
+    
+def pitch_vector_distance(pa,pb):
+    la = ~np.isnan(pa)
+    lb = ~np.isnan(pb)
+    x = pa[la]
+    y = pb[lb]
+    dist, cost, path = dtw(x,y)
+    return dist
+    
+def vector_to_file(t,file):
+    s = 's=['
+    for x in t:
+        s=s+ str(x)+','
+    s+=']'
+    with open(file,'wb') as f:
+        f.write(s)
         
+
+def file_to_pitch_vector(file):
+    r = []
+    for x in extract_pitches(file):
+        r.append(x)
+        
+    r1 = median_filt(r,5)
+    t = freq_to_notes(r1)
+    #t = median_filt(r1,5)
+    #t = r1
+    s = 's=['
+    for x in t:
+        s=s+ str(x)+','
+    s+=']'
+    #print s
+    
+    return t
+    
 if __name__ == '__main__':
     from dtw import dtw
-    file = 'c:\\src\\drm_clip.mp3'
+    #file = 'c:\\src\\sap\\doremi.wav'
+    file = 'mxml.wma'
     file1 = 'c:\\src\\wenrou_sing2.mp3'
     noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     r = []
     for x in extract_pitches(file):
         r.append(x)
+    #print r
     
+    r1 = median_filt(r,5)
+    t = freq_to_notes(r1)
+    
+    t = median_filt(t,5)
+    #t = note_segment(t)
+    s = 's=['
+    for x in t:
+        s=s+ str(x)+','
+    s+=']'
+    print s
+    plt.plot(t)
+    plt.show()
+    """
     filter = median_filt(r,5)
-    print filter
     filter = del_outlier_pitches(filter)
+    print filter
     filter = freq_to_notes(filter)
+    print filter
+    filter = note_segment(filter)
+    print filter
 
     s = []
     for x in extract_pitches(file1):
         s.append(x)
     
     filter2 = median_filt(s,5)
-    print filter2
+    
     filter2 = del_outlier_pitches(filter2)
+    print filter2
     filter2 = freq_to_notes(filter2)
+    print filter2
+    filter2 = note_segment(filter2)
+    print filter2
 
     plt.figure()
     plt.plot(filter, color="blue")
     plt.plot(filter2, color="red")
     dist, cost, path = dtw(filter, filter2)
     print dist
+    """
 
-    
-    k = freq_to_notes(filter)
-    nn =[]
-    for x in k:
-        nn.append(int(x))
-    print nn
     """
     k = freq_to_notes(filter2)
     nn =[]
     for x in k:
         nn.append(int(x))
     print nn
+    
     """
-    plt.show()
-    #file_hashes(file)
+    #plt.show()
     
         
