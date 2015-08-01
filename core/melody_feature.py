@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pydub
 
-from fingerprint import fingerprint,sliding_window,acf,DEFAULT_FS,DEFAULT_WINDOW_SIZE
+from filter import *
+from dtw import dtw
 
 def get_raw_from_file(filename):
     container = pydub.AudioSegment.from_file(filename)
@@ -17,45 +18,11 @@ def get_raw_from_file(filename):
         channels.append(data[chn::container.channels])
     return channels,container.frame_rate
     
-def generate_hashes(data):
-    hashes = fingerprint(data,wsize = 4096,wratio = 0.5)
-    return set(hashes)
-
-def file_hashes(filename):
-    channels = get_raw_from_file(filename)
-    r = set()
-    for data in channels:
-        r |= generate_hashes(data)
-    return r
-
-def find_local_max(sequence):
-    return np.r_[True, sequence[1:] > sequence[:-1]] & np.r_[sequence[:-1] > sequence[1:], True]
-
-def find_max(sequence):
-    l = find_local_max(sequence)
-    # skip the first
-    l[0] = False
-    try:
-        index = sequence[l].argmax()
-    except:
-        return 0,-1
-    loc = np.where(l)[0]
-    offset = loc[index]
-    return sequence[offset],offset
-    
 def freq_to_notes(freqs):
     log440 = 8.78135971
     notes_array = np.asarray(freqs)
     notes = 12 * (np.log2(notes_array) - log440) + 69
     return notes
-
-def del_outlier_pitches(sequence,thresh=1000):
-    x = np.asarray(sequence)
-    criteria_a = (x < 1)
-    criteria_b = (x > thresh)
-    criteria = criteria_a|criteria_b
-    criteria = (criteria == False)
-    return x[criteria]
 
 def note_segment(sequence,thresh=1):
     x = np.asarray(sequence)
@@ -84,24 +51,6 @@ def note_segment(sequence,thresh=1):
 
     return y
 
-def median_filt(data, k):
-    """Apply a length-k median filter to a 1D array x.
-    Boundaries are extended by repeating endpoints.
-    """
-    assert k % 2 == 1, "Median filter length must be odd."
-    x = np.asarray(data)
-    assert x.ndim == 1, "Input must be one-dimensional."
-    k2 = (k - 1) // 2
-    y = np.zeros ((len (x), k), dtype=x.dtype)
-    y[:,k2] = x
-    for i in range (k2):
-        j = k2 - i
-        y[j:,i] = x[:-j]
-        y[:j,i] = x[0]
-        y[:-j,-(i+1)] = x[j:]
-        y[-j:,-(i+1)] = x[-1]
-    return np.median(y, axis=1)
-
 def cal_energy(sequence):
     data = np.asarray(sequence)
     return data.max()
@@ -111,7 +60,6 @@ def cal_energy(sequence):
 def frame_to_pitch(frame,fs,thresh):
     frame_x = np.asarray(frame)
     invalid = -1
-
     if cal_energy(frame_x) < thresh:
         return invalid
     else:
@@ -131,7 +79,7 @@ def frame_to_pitch(frame,fs,thresh):
     
 def extract_pitches(filename):
     channels,fs = get_raw_from_file(filename)
-    ws = int(round(32*fs/1000.0))
+    ws = int(round(DEFAULT_FRAME_DURATION*fs/1000.0))
     data = channels[0]
     energy = cal_energy(data)
     thresh = 0.3*energy
@@ -142,7 +90,6 @@ def extract_pitches(filename):
     return result
     
 def pitch_vector_distance(pa,pb):
-    
     la = ~np.isnan(pa)
     lb = ~np.isnan(pb)
     x = pa[la]
@@ -150,7 +97,8 @@ def pitch_vector_distance(pa,pb):
     
     dist, cost, path = dtw(x,y)
     return dist
-    
+
+# dump pitch vector to file
 def vector_to_file(t,file):
     s = 's=['
     for x in t:
@@ -158,7 +106,6 @@ def vector_to_file(t,file):
     s+='];'
     with open(file,'wb') as f:
         f.write(s)
-        
 
 def file_to_pitch_vector(file):
     r = extract_pitches(file)

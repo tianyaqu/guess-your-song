@@ -1,5 +1,5 @@
-*.mp3
-*.wav
-*.wma
+core/*.mp3
+core/*.wav
+core/*.wma
 *.txt
 *.pyc
