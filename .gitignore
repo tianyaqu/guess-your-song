@@ -1,5 +1,6 @@
 core/*.mp3
 core/*.wav
 core/*.wma
+*.mid
 *.txt
 *.pyc

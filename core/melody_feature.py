@@ -79,7 +79,7 @@ def frame_to_pitch(frame,fs,thresh):
     
 def extract_pitches(filename):
     channels,fs = get_raw_from_file(filename)
-    ws = int(round(DEFAULT_FRAME_DURATION*fs/1000.0))
+    ws = int(round(40*fs/1000.0))
     data = channels[0]
     energy = cal_energy(data)
     thresh = 0.3*energy
@@ -100,28 +100,67 @@ def pitch_vector_distance(pa,pb):
 
 # dump pitch vector to file
 def vector_to_file(t,file):
-    s = 's=['
-    for x in t:
-        s=s+ str(x)+','
-    s+='];'
+    s = ''.join(map(lambda x:str(x)+',',t))
     with open(file,'wb') as f:
         f.write(s)
 
 def file_to_pitch_vector(file):
     r = extract_pitches(file)
-    r1 = median_filt(r,5)
-    t = freq_to_notes(r1)
+    #t = freq_to_notes(r1)
+    r1 = freq_to_notes(r)
+    t = median_filt(r1,5)
     
     return t
     
+def plsh(file):
+    pv = file_to_pitch_vector(file)
+    for x in sliding_window(pv,ws=60):
+        note = x[::3]
+        #very helpful to set nan as 0
+        loc = np.isnan(note)
+        note[loc] = 0
+        #note = x
+        yield note,file
+            
 if __name__ == '__main__':
     from dtw import dtw
-    #file = 'c:\\src\\sap\\doremi.wav'
+    from lshash import LSHash
+
+    hash_len = 10
+    dm = 20
+
+    lsh = LSHash(hash_len, dm)
     f1 = 'xml.wav'
     f2 = 'mxml2.wma'
     f3 = 'soo.wav'
     f4 = '10-little-indians.wav'
+    f5 = 'xyx.wav'
+    """
+    pv = []
+    for note,name in plsh(f5):
+        pv.extend(note)
+    vector_to_file(pv,'f5.txt')
+    """
+    for note,name in plsh(f1):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in plsh(f3):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in plsh(f4):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in plsh(f5):
+        lsh.index(note,extra_data=(name,0.8))
+        
+    for note,name in plsh(f2):
+        q = note
+        r = lsh.query(q)
+        print '-------------------'
+        if(len(r) > 0):
+            print len(r)
+            print r[0][0][1]
+        #lsh.index(note,extra_data=(name,0.8))
+    
 
+    """
     p1 = file_to_pitch_vector(f1)
     p2 = file_to_pitch_vector(f2)
     p3 = file_to_pitch_vector(f3)
@@ -138,5 +177,6 @@ if __name__ == '__main__':
     plt.plot(p3,'blue')
     plt.plot(p4,'yellow')
     plt.show()
+    """
     
         
