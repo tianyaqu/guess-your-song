@@ -24,8 +24,8 @@ class NoteSeq(object):
                         tempo = 60000000.0/message.tempo
                         scale_coff = (60*1000.0)/(tempo*mid.ticks_per_beat)
             
-            # assume track 1 is major track
-            if(i == 1):
+            # extract notes
+            else:
                 x = dict(chn=0,note=0,start=0,duration=0,open=False)
                 for message in track:
                     if(message.type == 'note_on' and message.velocity != 0):
