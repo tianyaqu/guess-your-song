@@ -4,6 +4,7 @@ import pydub
 
 from filter import *
 from dtw import dtw
+from midi import NoteSeq
 
 def get_raw_from_file(filename):
     container = pydub.AudioSegment.from_file(filename)
@@ -77,9 +78,9 @@ def frame_to_pitch(frame,fs,thresh):
         pitch = fs/(index - 1.0)
         return pitch
     
-def extract_pitches(filename):
+def extract_pitches(filename,duration=40.0):
     channels,fs = get_raw_from_file(filename)
-    ws = int(round(40*fs/1000.0))
+    ws = int(round(duration*fs/1000.0))
     data = channels[0]
     energy = cal_energy(data)
     thresh = 0.3*energy
@@ -122,10 +123,32 @@ def plsh(file):
         note[loc] = 0
         yield note,file
 
+def note_pitch(note_seq):
+    pass
+
 # note based lsh
+def nlsh_from_midi(file):
+    thresh = 40*10.0
+    s = NoteSeq(file)
+
+    for k,v in s.get_note_seq():
+        note_seq = []
+        for x in v:
+            n = int(x[2]/thresh)
+            if(n > 1):
+                note_seq.extend([x[0]]*n)
+            else:
+                note_seq.append(x[0])
+        #print len(note_seq)
+        #vector_to_file(note_seq,'n1.txt')
+        for note in sliding_window(note_seq,ws=10,shift_ratio=0.1):
+            yield note,file
+
+
 def nlsh(file):
     pv = file_to_pitch_vector(file)
-    for x in sliding_window(pv,ws=60):
+    pv = note_segment(pv)
+    for x in sliding_window(pv,ws=30):
         note = x[::3]
         #[::3]
         #very helpful to set nan as 0
@@ -138,7 +161,7 @@ if __name__ == '__main__':
     from lshash import LSHash
 
     hash_len = 10
-    dm = 20
+    dm = 10
 
     lsh = LSHash(hash_len, dm)
     f1 = 'xml.wav'
@@ -146,13 +169,47 @@ if __name__ == '__main__':
     f3 = 'soo.wav'
     f4 = '10-little-indians.wav'
     f5 = 'xyx.wav'
-    f6 = '00001.mid'
+    f6 = '00003.mid'
+    
+    mid1 = '00001.mid'
+    mid2 = '00002.mid'
+    mid3 = '00003.mid'
+    mid13 = '00013.mid'
+    mid4 = '00004.mid'
+    mid15 = '00015.mid'
+    mid18 = '00018.mid'
+    mid19 = '00019.mid'
+    mid20 = '00020.mid'
+    #for note,name in nlsh_from_midi(mid13):
+    #    print note,name
+    #print pv
 
-    pv = []
-    for note,name in plsh('wenrou_org.wav'):
-        pv.extend(note)
-    #seg = note_segment(pv)
-    vector_to_file(pv,'f6.txt')
+
+    for note,name in nlsh_from_midi(mid13):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in nlsh_from_midi(mid4):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in nlsh_from_midi(mid15):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in nlsh_from_midi(mid18):
+        lsh.index(note,extra_data=(name,0.8))
+    #for note,name in nlsh_from_midi(mid5):
+    #    lsh.index(note,extra_data=(name,0.8))
+    for note,name in nlsh_from_midi(mid19):
+        lsh.index(note,extra_data=(name,0.8))
+
+    for note,name in nlsh('xml.wav'):
+        q = note
+        r = lsh.query(q)
+        print '-------------------'
+        if(len(r) > 0):
+            print len(r)
+            nn = min(5,len(r))
+            for k in range(nn):
+                print r[k][0]   
+
+               
+
     """
     for note,name in plsh(f1):
         lsh.index(note,extra_data=(name,0.8))
