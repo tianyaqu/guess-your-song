@@ -33,14 +33,14 @@ def note_segment(sequence,thresh=1):
             end = index + 1
             if(end == x.size-1):
                 #print 's',start,index+1,x[start:x.size]
-                avg = np.average(x[start:x.size])
+                avg = np.median(x[start:x.size])
                 x[start:x.size] = avg
                 if(x.size - start >= 1):
                     #print 'append'
                     y = np.append(y,x[start:x.size])
         else:
             #print start,index+1, x[start:index+1]
-            avg = np.average(x[start:index+1])
+            avg = np.median(x[start:index+1])
             x[start:index+1] = avg
             if(index+1 - start >= 1):
                 #print 'b append'
@@ -111,7 +111,8 @@ def file_to_pitch_vector(file):
     t = median_filt(r1,5)
     
     return t
-    
+
+#pitch based lsh
 def plsh(file):
     pv = file_to_pitch_vector(file)
     for x in sliding_window(pv,ws=60):
@@ -119,11 +120,21 @@ def plsh(file):
         #very helpful to set nan as 0
         loc = np.isnan(note)
         note[loc] = 0
+        yield note,file
+
+# note based lsh
+def nlsh(file):
+    pv = file_to_pitch_vector(file)
+    for x in sliding_window(pv,ws=60):
+        note = x[::3]
+        #[::3]
+        #very helpful to set nan as 0
+        loc = np.isnan(note)
+        note[loc] = 0
         #note = x
         yield note,file
             
 if __name__ == '__main__':
-    from dtw import dtw
     from lshash import LSHash
 
     hash_len = 10
@@ -135,11 +146,13 @@ if __name__ == '__main__':
     f3 = 'soo.wav'
     f4 = '10-little-indians.wav'
     f5 = 'xyx.wav'
-    """
+    f6 = '00001.mid'
+
     pv = []
-    for note,name in plsh(f5):
+    for note,name in plsh('wenrou_org.wav'):
         pv.extend(note)
-    vector_to_file(pv,'f5.txt')
+    #seg = note_segment(pv)
+    vector_to_file(pv,'f6.txt')
     """
     for note,name in plsh(f1):
         lsh.index(note,extra_data=(name,0.8))
@@ -156,10 +169,9 @@ if __name__ == '__main__':
         print '-------------------'
         if(len(r) > 0):
             print len(r)
-            print r[0][0][1]
-        #lsh.index(note,extra_data=(name,0.8))
+            print r[0][0]
     
-
+    """
     """
     p1 = file_to_pitch_vector(f1)
     p2 = file_to_pitch_vector(f2)
