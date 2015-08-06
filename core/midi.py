@@ -60,6 +60,6 @@ class NoteSeq(object):
             yield channel,note_seq
         
 if __name__ == '__main__':
-    s = NoteSeq('00001.mid') 
+    s = NoteSeq('yldw.mid') 
     for k,v in s.get_note_seq():
         print v

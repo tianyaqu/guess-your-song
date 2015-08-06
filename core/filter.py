@@ -67,3 +67,9 @@ def median_filt(data, k):
         y[:-j,-(i+1)] = x[j:]
         y[-j:,-(i+1)] = x[-1]
     return np.median(y, axis=1)
+    
+def del_outlier_pitches(pv,thresh=10):
+    adjusted = pv - np.median(pv)
+    loc = (abs(adjusted) > thresh)
+    pv[loc] = 0
+    return pv
