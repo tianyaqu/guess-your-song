@@ -6,16 +6,17 @@ class ErrorStr(Exception):
 
 class NoteSeq(object):
     def __init__(self,file):
-        try:
+        #try:
             self.mid = MidiFile(file)
             self.chs = {}
             self._load(self.mid)
-        except Exception,e:
-            raise ErrorStr,'midi file not exist,try another.'
+        #except Exception,e:
+        #    raise ErrorStr,'midi file not exist,try another.'
     
     def _load(self,mid):
         tempo = 120.0
         scale_coff = 1.04
+        last = {}
         for i, track in enumerate(mid.tracks):
             #print('Track {}: {}'.format(i, track.name))
             # track 0 as descriptor
@@ -24,31 +25,38 @@ class NoteSeq(object):
                     #print message
                     if(message.type == 'set_tempo'):
                         tempo = 60000000.0/message.tempo
+                        #how many miliseconds per ticks
                         scale_coff = (60*1000.0)/(tempo*mid.ticks_per_beat)
             
             # extract notes
             #else:
-            x = dict(chn=0,note=0,start=0,duration=0,open=False)
+            cur_time = 0
             for message in track:
-                #print message
+                cur_time += message.time
+                print message
                 if(message.type == 'note_on' and message.velocity != 0):
-                    x['note'] = message.note
-                    x['chn'] = message.channel
-                    x['start'] = x['start'] + x['duration']
-                    x['open'] = True
+                    if(not last.has_key(message.channel)):
+                        last[message.channel] = []
+
+                    ele = dict(note=message.note,start=cur_time,duration=0,open=True)
+                    last[message.channel].append(ele)
+
                 elif((message.type == 'note_on') or message.type == 'note_off'):
-                    if(x['open'] == True and x['chn'] == message.channel and x['note'] == message.note):
-                        #in ms
+                    print last[message.channel]
+                    print '---',int(cur_time*scale_coff),message
+                    ls = [ x for x in last[message.channel] if x['note'] == message.note]
+                    len_ls = len(ls)
+                    if(len_ls > 1 or len_ls <= 0):
+                        raise ErrorStr,'note on/off not match.'
+                        #print 'not matched----'
+                    if(ls[0]['open'] == True):
+                        start = int(ls[0]['start']*scale_coff)
                         duration = int(message.time*scale_coff)
-                        x['duration'] = duration
-                        x['open'] = False
-                        
                         # append (note,start_time,duration) pair
-                        if(self.chs.has_key(message.channel)):
-                            self.chs[message.channel].append((message.note,x['start'],duration))
-                        else:
+                        if(not self.chs.has_key(message.channel)):
                             self.chs[message.channel] = []
-                            self.chs[message.channel].append((message.note,x['start'],duration))
+                        self.chs[message.channel].append((message.note,start,duration))
+                        last[message.channel].remove(ls[0])
                     else:
                         raise ErrorStr,'note on/off not match.'
                 elif(message.type == 'end_of_track'):
@@ -60,6 +68,6 @@ class NoteSeq(object):
             yield channel,note_seq
         
 if __name__ == '__main__':
-    s = NoteSeq('yldw.mid') 
+    s = NoteSeq('baba-go.mid') 
     for k,v in s.get_note_seq():
-        print v
+        print 'chnnel:',k,v
