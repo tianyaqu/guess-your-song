@@ -113,6 +113,21 @@ def file_to_pitch_vector(file):
     return t
 
 # note sequence from midi
+def note_from_midi_test(file):
+    thresh = 40
+    s = NoteSequencer(file)
+
+    for k,v in s.get_note_seq():
+        note_seq = []
+        for x in v:
+            n = int(x[2]/thresh)
+            if(n > 1):
+                note_seq.extend([x[0]]*n)
+            else:
+                note_seq.append(x[0])
+        yield k,note_seq
+
+# note sequence from midi
 def note_from_midi(file):
     thresh = 40
     s = NoteSequencer(file)
@@ -125,9 +140,11 @@ def note_from_midi(file):
                 note_seq.extend([x[0]]*n)
             else:
                 note_seq.append(x[0])
+
         note_array = np.array(note_seq)
         note_array = note_array - note_array.mean()
-        #vector_to_file(note_array,'n3.txt')
+        ff = 'aaa' + file + '.txt'
+        vector_to_file(note_array,ff)
         for note in sliding_window(note_array,ws=10,shift_ratio=0.1):
             yield note,file
 
@@ -190,12 +207,31 @@ if __name__ == '__main__':
     mid19 = '00019.mid'
     mid20 = '00020.mid'
     
+    s1 = 'yldw.mid'
+    s2 = 'alphaville-forever_young.mid'
+    s3 = 'counting_stars.mid'
+    s4 = 'baba-go.mid'
+    mid13 = '00013.mid'
+    mid7 = '00007.mid'
+    
     #note_from_midi(mid13)
     #for note,name in nlsh_from_midi(mid13):
         #print note,name
         #pass
     #print pv
-
+    for note,name in note_from_midi(s1):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in note_from_midi(s2):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in note_from_midi(s3):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in note_from_midi(s4):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in note_from_midi(mid13):
+        lsh.index(note,extra_data=(name,0.8))
+    for note,name in note_from_midi(mid7):
+        lsh.index(note,extra_data=(name,0.8))        
+    """
     for note,name in note_from_midi(mid1):
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid2):
@@ -235,6 +271,7 @@ if __name__ == '__main__':
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid20):
         lsh.index(note,extra_data=(name,0.8))
+    """
     kk = []
     i = 0
     for note,name in nlsh('xml.wav'):
