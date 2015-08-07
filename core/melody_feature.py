@@ -143,8 +143,8 @@ def note_from_midi(file):
 
         note_array = np.array(note_seq)
         note_array = note_array - note_array.mean()
-        ff = 'aaa' + file + '.txt'
-        vector_to_file(note_array,ff)
+        #ff = 'aaa' + file + '.txt'
+        #vector_to_file(note_array,ff)
         for note in sliding_window(note_array,ws=10,shift_ratio=0.1):
             yield note,file
 
@@ -179,12 +179,6 @@ if __name__ == '__main__':
     hash_len = 10
     dm = 10
     lsh = LSHash(hash_len, dm)
-
-    f1 = 'xml.wav'
-    f2 = 'mxml2.wma'
-    f3 = 'soo.wav'
-    f4 = '10-little-indians.wav'
-    f5 = 'xyx.wav'
     
     mid1 = '00001.mid'
     mid2 = '00002.mid'
@@ -211,14 +205,8 @@ if __name__ == '__main__':
     s2 = 'alphaville-forever_young.mid'
     s3 = 'counting_stars.mid'
     s4 = 'baba-go.mid'
-    mid13 = '00013.mid'
-    mid7 = '00007.mid'
     
-    #note_from_midi(mid13)
-    #for note,name in nlsh_from_midi(mid13):
-        #print note,name
-        #pass
-    #print pv
+
     for note,name in note_from_midi(s1):
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(s2):
@@ -227,11 +215,7 @@ if __name__ == '__main__':
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(s4):
         lsh.index(note,extra_data=(name,0.8))
-    for note,name in note_from_midi(mid13):
-        lsh.index(note,extra_data=(name,0.8))
-    for note,name in note_from_midi(mid7):
-        lsh.index(note,extra_data=(name,0.8))        
-    """
+
     for note,name in note_from_midi(mid1):
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid2):
@@ -242,8 +226,9 @@ if __name__ == '__main__':
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid5):
         lsh.index(note,extra_data=(name,0.8))
-    for note,name in note_from_midi(mid6):
+    for note,name in note_from_midi(mid13):
         lsh.index(note,extra_data=(name,0.8))
+
     for note,name in note_from_midi(mid7):
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid8):
@@ -259,7 +244,7 @@ if __name__ == '__main__':
 
     for note,name in note_from_midi(mid13):
         lsh.index(note,extra_data=(name,0.8))
-    for note,name in note_from_midi(mid4):
+    for note,name in note_from_midi(mid14):
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid15):
         lsh.index(note,extra_data=(name,0.8))
@@ -271,23 +256,34 @@ if __name__ == '__main__':
         lsh.index(note,extra_data=(name,0.8))
     for note,name in note_from_midi(mid20):
         lsh.index(note,extra_data=(name,0.8))
-    """
+
     kk = []
     i = 0
+    result = {}
     for note,name in nlsh('xml.wav'):
         q = note
-        #del_outlier_pitches(note)
         kk.extend(q)
         r = lsh.query(q)
         print '--------'+str(i)+'-----------'
         i += 1
         if(len(r) > 0):
             print len(r)
-            nn = min(5,len(r))
+            # keep 3 candidate
+            nn = min(3,len(r))
+            # let's vote(based on distance)
             for k in range(nn):
+                w = r[k][1]
+                name = r[k][0][1][0]
+                if(not result.has_key(name)):
+                    result[name] = 0.0
+                else:
+                    w *= 0.93
+                result[name] += w
                 print r[k][0][1],r[k][1]
-
-    vector_to_file(kk,'n2.txt')
+    
+    candidates = sorted(result.items(), lambda x, y: cmp(x[1], y[1]))
+    print '----------------------------'
+    print candidates
         
 
     """

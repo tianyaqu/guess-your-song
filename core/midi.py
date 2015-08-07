@@ -30,7 +30,7 @@ class NoteSequencer(object):
             
             # extract notes
             # i have manually change the track name to mainx for the main track
-            if(track.name == 'mainx'):
+            if(track.name == 'mainx' or track.name == 'MAJOR_TRACK'):
                 cur_time = 0
                 for message in track:
                     cur_time += message.time
