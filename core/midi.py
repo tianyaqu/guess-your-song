@@ -4,7 +4,7 @@ class ErrorStr(Exception):
     def __init__(self,err_str):
         Exception.__init__(self,err_str)
 
-class NoteSeq(object):
+class NoteSequencer(object):
     def __init__(self,file):
         #try:
             self.mid = MidiFile(file)
@@ -29,7 +29,6 @@ class NoteSeq(object):
                         scale_coff = (60*1000.0)/(tempo*mid.ticks_per_beat)
             
             # extract notes
-            #else:
             cur_time = 0
             for message in track:
                 cur_time += message.time
@@ -47,8 +46,9 @@ class NoteSeq(object):
                     ls = [ x for x in last[message.channel] if x['note'] == message.note]
                     len_ls = len(ls)
                     if(len_ls > 1 or len_ls <= 0):
+                        #fix me
+                        #what if got a key stucked? raise an error or be more fault-tolerable?
                         raise ErrorStr,'note on/off not match.'
-                        #print 'not matched----'
                     if(ls[0]['open'] == True):
                         start = int(ls[0]['start']*scale_coff)
                         duration = int(message.time*scale_coff)
@@ -68,6 +68,6 @@ class NoteSeq(object):
             yield channel,note_seq
         
 if __name__ == '__main__':
-    s = NoteSeq('baba-go.mid') 
+    s = NoteSequencer('yldw.mid') 
     for k,v in s.get_note_seq():
         print 'chnnel:',k,v

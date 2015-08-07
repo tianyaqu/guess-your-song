@@ -4,7 +4,7 @@ import pydub
 
 from filter import *
 from dtw import dtw
-from midi import NoteSeq
+from midi import NoteSequencer
 
 def get_raw_from_file(filename):
     container = pydub.AudioSegment.from_file(filename)
@@ -115,7 +115,7 @@ def file_to_pitch_vector(file):
 # note sequence from midi
 def note_from_midi(file):
     thresh = 40
-    s = NoteSeq(file)
+    s = NoteSequencer(file)
 
     for k,v in s.get_note_seq():
         note_seq = []
